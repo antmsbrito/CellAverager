@@ -20,7 +20,7 @@ This tool (without spot detection support) is implemented in [eHooke][1].
 
 #### - Organize image data. 
 ```
-Experiment 
+Experiment #1 
 │
 └───FoV_1
 │   ├──   Fluor_1.tif
@@ -35,6 +35,22 @@ Experiment
 │   ├──   Fluor_1.xml (optional)
 │   └──   Base.tif
 └─── ...
+Experiment #2
+│
+└───FoV_1
+│   ├──   Fluor_1.tif
+│   ├──   Fluor_1.xml (optional)
+│   ├──   Fluor_2.tif
+│   ├──   Fluor_1.xml (optional)
+│   └──   Base.tif
+└───FoV_1
+│   ├──   Fluor_1.tif
+│   ├──   Fluor_1.xml (optional)
+│   ├──   Fluor_2.tif
+│   ├──   Fluor_1.xml (optional)
+│   └──   Base.tif
+└─── ...
+...
 
 ```
 #### - Run `main.py` from eHooke's environment and follow the instructions
