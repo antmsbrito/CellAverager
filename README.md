@@ -37,7 +37,7 @@ Experiment
 └─── ...
 
 ```
-#### - 
+#### - Run `main.py` from eHooke's environment and follow the instructions
 
 [1]: https://github.com/antmsbrito/eHooke_1.0
 [2]: doi:10.1038/s41592-022-01507-1
