@@ -72,12 +72,6 @@ class CellModeler:
             box = self.cellmanager.cells[key].box
             self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = spots.filterbox(box, align)
 
-        # self.create_cell_model(1, 'greater', savepath)
-        # self.create_cell_model(0, 'equal', savepath)
-        # self.create_cell_model(1, 'equal', savepath)
-        # self.create_cell_model(2, 'equal', savepath)
-        # self.create_cell_model(4, 'equal', savepath)
-        # self.create_cell_model(4, 'greater', savepath)
         self.create_cell_model(1, 'greater', savepath)
 
     def create_cell_model(self, spotnumber, operation, savepath):
