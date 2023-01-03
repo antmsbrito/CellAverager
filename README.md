@@ -9,12 +9,11 @@ major axis and averages the fluorescence in order to build a model cell. It requ
 If spot detection was done using [TrackMate][2] and the output .xml file is provided it can
 also build an heatmap of the average spot localization.
 
-This tool (without spot detection support) is implemented in [eHooke][1].
-
+This tool (without spot detection support) is implemented in this [eHooke branch][1].
 
 ## Requirements
 ####  Built in Python 3.6
-#### - eHooke (https://github.com/antmsbrito/eHooke_1.0)
+#### - eHooke and its dependencies (https://github.com/antmsbrito/eHooke_1.0)
 
 ## Usage instructions
 
@@ -64,5 +63,19 @@ You have to provide the following information:
  5. The type of base image provided
  6. Press ENTER!
 
+## Acknowledgements
+
+This tool relies heavily on a fork of eHooke. eHooke is a tool originally developed by [Bruno Saraiva][3]. The original
+eHooke publication can be found [here][4]. 
+
+Furthermore, the current implementation of this tool is very heavily inspired by an earlier tool developed by [Bruno][5].
+Specifically the `CellAligner` and `CellModeler` classes are refactors of classes he wrote. Therefore, the original idea
+behind this tool can be attributed to him.
+
+This tool has a repository of his own in my personal page with his permission. 
+
 [1]: https://github.com/antmsbrito/eHooke_1.0
 [2]: doi:10.1038/s41592-022-01507-1
+[3]: https://github.com/brunomsaraiva
+[4]: doi:10.1017/S2633903X21000027
+[5]: https://github.com/brunomsaraiva/CellAverager
