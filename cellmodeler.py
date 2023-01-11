@@ -109,12 +109,12 @@ class CellModeler:
         selected_cells = self.resize_cells(selected_cells)
         self.cell_model = self.create_cell_average(selected_cells)
         self.save_cell_model(savepath + f"model_{operation}_{spotnumber}")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}", selected_cells)
+        self.model2color(savepath + f"color_{operation}_{spotnumber}")
 
         new_cells = np.array([resize(c, (self.mean_x, self.mean_y)) for c in new_cells])
         self.cell_model = self.create_cell_average(new_cells)
         self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_TM_SPOTS")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}_TM_SPOTS", new_cells)
+        self.model2color(savepath + f"color_{operation}_{spotnumber}_TM_SPOTS")
 
     def save_cell_model(self, path=None):
         if path is None:
@@ -122,7 +122,7 @@ class CellModeler:
 
         imsave(path + ".tif", self.cell_model, plugin="tifffile", imagej=False, description=str(self.number_of_cells))
 
-    def model2color(self, savepath, celllist):
+    def model2color(self, savepath):
 
         mask = self.cell_model > threshold_isodata(self.cell_model)
         filtered = self.cell_model * mask
