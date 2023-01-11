@@ -7,7 +7,7 @@ Given a set of microscopy images the tool automatically runs eHooke in order to 
 major axis and averages the fluorescence in order to build a model cell. It requires per FoV a base image that eHooke can segment (phase, brightfield or membrane dye) and it works with 1 or 2 fluorescence channels.
 
 If spot detection was done using [TrackMate][2] and the output .xml file is provided it can
-also build an heatmap of the average spot localization.
+also build an heatmap of the average spot localization. Spot detection HAS to be done using the following gist - https://gist.github.com/antmsbrito/f2250a1a905457436532ee761fa6eab7 (otherwise the order of the XML nodes dont match)
 
 This tool (without spot detection support) is implemented in this [eHooke branch][1].
 
