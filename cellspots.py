@@ -56,7 +56,3 @@ class Spots:
                 count += 1
 
         return count, coords
-
-
-if __name__ == '__main__':
-    xmlfile = r"C:\Users\António\Documents\30-11-2022_heatmaps\2022-11-30_oriYFP-terCFP\1\YFP.xml"
