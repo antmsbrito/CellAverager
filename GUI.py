@@ -26,6 +26,9 @@ class MainGUI(tk.Tk):
         self.fluor2_var = tk.StringVar()
         self.fluor2_var.set("")
 
+        self.membrane_var = tk.StringVar()
+        self.membrane_var.set("")
+
         self.basetype_var = tk.StringVar()
         self.basetype_var.set("Phase")
 
@@ -69,10 +72,15 @@ class MainGUI(tk.Tk):
         fluor2_entry = tk.Entry(master=names_frame, textvariable=self.fluor2_var)
         fluor2_entry.grid(column=1, row=1, sticky=tk.W + tk.E)
 
+        memb_label = tk.Label(master=names_frame, text="Membrane file name (optional)", anchor='w')
+        memb_label.grid(column=0, row=2, sticky=tk.W + tk.E)
+        memb_entry = tk.Entry(master=names_frame, textvariable=self.membrane_var)
+        memb_entry.grid(column=1, row=2, sticky=tk.W + tk.E)
+
         base_label = tk.Label(master=names_frame, text="Base file name", anchor='w')
-        base_label.grid(column=0, row=2, sticky=tk.W + tk.E)
+        base_label.grid(column=0, row=3, sticky=tk.W + tk.E)
         base_entry = tk.Entry(master=names_frame, textvariable=self.base_var)
-        base_entry.grid(column=1, row=2, sticky=tk.W + tk.E)
+        base_entry.grid(column=1, row=3, sticky=tk.W + tk.E)
 
     def init_basetype(self):
         basetype_frame = tk.Frame(self)
