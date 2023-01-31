@@ -54,6 +54,11 @@ def run_CellAverager(base, fluor, basetype):
     cel.compute_cells(par, imm, seg)
     cel.process_cells(par.cellprocessingparams, imm)
     cel.overlay_cells(imm)
+
+    # Classify cells
+    ccc = CellCycleClassifier()
+    ccc.classify_cells(imm, cel, "Epifluorescence")
+
     # end of ehooke
 
     # Cell alignment
@@ -180,6 +185,7 @@ if __name__ == '__main__':
     from parameters import MaskParameters, RegionParameters, CellParameters, ParametersManager
     from segments import SegmentsManager
     from cells import CellManager
+    from cellcycleclassifier import CellCycleClassifier
 
     for condition in os.listdir(rootfolder):
 
