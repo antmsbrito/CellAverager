@@ -106,6 +106,7 @@ class CellModeler:
             blank = rotate(blank, cell.angle_of_rotation)
             new_cells.append(blank)
 
+        # This has to be repeated and not a call to create cell model from ehooke because we filtered anucleates
         selected_cells = self.resize_cells(selected_cells)
         self.cell_model = self.create_cell_average(selected_cells)
         self.save_cell_model(savepath + f"model_{operation}_{spotnumber}")
