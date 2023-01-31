@@ -15,7 +15,7 @@ from cellmodeler import CellModeler
 from cellaligner import CellAligner
 
 
-def run_CellAverager(base, fluor, basetype):
+def run_CellAverager(base, fluor, basetype, membrane):
     """
     Runs ehooke segmentation on two images and saves the label image
     Aligns cells and calculates cell model average
@@ -43,7 +43,12 @@ def run_CellAverager(base, fluor, basetype):
     imm.load_base_image(base, par.imageloaderparams)
     imm.compute_base_mask(par.imageloaderparams)
     imm.compute_mask(par.imageloaderparams)
-    imm.load_fluor_image(fluor, par.imageloaderparams)
+
+    if os.path.exists(membrane):
+        imm.load_fluor_image(membrane, par.imageloaderparams)
+        imm.load_option_image(fluor, par.imageloaderparams)
+    else:
+        imm.load_fluor_image(fluor, par.imageloaderparams)
 
     seg = SegmentsManager()
     seg.compute_segments(par.imageprocessingparams, imm)
@@ -55,21 +60,27 @@ def run_CellAverager(base, fluor, basetype):
     cel.process_cells(par.cellprocessingparams, imm)
     cel.overlay_cells(imm)
 
-    # Classify cells
-    ccc = CellCycleClassifier()
-    ccc.classify_cells(imm, cel, "Epifluorescence")
+    if os.path.exists(membrane):
+        # Classify cells
+        ccc = CellCycleClassifier()
+        ccc.classify_cells(imm, cel, "Epifluorescence", False)
 
-    # end of ehooke
+        # Cell alignment
+        cellalligner = CellAligner(cel, fluorescence="Optional")
+        cellalligner.align_cells()
 
-    # Cell alignment
-    cellalligner = CellAligner(cel)
-    cellalligner.align_cells()
+    else:
+        # Cell alignment
+        cellalligner = CellAligner(cel)
+        cellalligner.align_cells()
 
     # Cell model
     savepath = fluor[:-4] + "_CA_"
     cellmodeler = CellModeler(cel)
 
-    if os.path.exists(fluor.replace('.tif', '.xml')):
+    if os.path.exists(fluor.replace('.tif', '.xml')) and os.path.exists(membrane):
+        cellmodeler.create_cell_model_from_TM(fluor.replace('.tif', '.xml'), savepath, imm.align_values, True)
+    elif os.path.exists(fluor.replace('.tif', '.xml')) and not os.path.exists(membrane):
         cellmodeler.create_cell_model_from_TM(fluor.replace('.tif', '.xml'), savepath, imm.align_values)
     else:
         cellmodeler.create_cell_model_from_ehooke(savepath)
@@ -77,17 +88,18 @@ def run_CellAverager(base, fluor, basetype):
     return 1
 
 
-def run_batch_workflow(folder, fluor_names, base_name, base_type):
+def run_batch_workflow(folder, fluor_names, base_name, base_type, membrane):
     for replicate in os.listdir(folder):
         replicate_fullname = os.path.join(folder, replicate)
         if os.path.isdir(replicate_fullname):
             base_path = os.path.join(replicate_fullname, base_name + '.tif')
             for fname in fluor_names:
                 fluor_path = os.path.join(replicate_fullname, fname + '.tif')
-                run_CellAverager(base_path, fluor_path, base_type)
+                membrane_path = os.path.join(replicate_fullname, membrane + '.tif')
+                run_CellAverager(base_path, fluor_path, base_type, membrane_path)
 
 
-def join_replicates(folder, fluor_names):
+def join_replicates(folder, fluor_names, phase):
 
     all_fluor1 = []
     N_fluor1 = []
@@ -103,10 +115,10 @@ def join_replicates(folder, fluor_names):
         replicate_fullname = os.path.join(folder, replicate)
 
         if os.path.isdir(replicate_fullname):
-            fluor1name = os.path.join(replicate_fullname, fluor_names[0]+"_CA_model_greater_1"+".tif")
-            fluor1name_tm = os.path.join(replicate_fullname, fluor_names[0]+"_CA_model_greater_1_TM_SPOTS"+".tif")
-            fluor2name = os.path.join(replicate_fullname, fluor_names[1]+"_CA_model_greater_1"+".tif")
-            fluor2name_tm = os.path.join(replicate_fullname, fluor_names[1]+"_CA_model_greater_1_TM_SPOTS"+".tif")
+            fluor1name = os.path.join(replicate_fullname, fluor_names[0]+f"_CA_model_greater_1_phase{phase}"+".tif")
+            fluor1name_tm = os.path.join(replicate_fullname, fluor_names[0]+f"_CA_model_greater_1_phase{phase}_TM_SPOTS"+".tif")
+            fluor2name = os.path.join(replicate_fullname, fluor_names[1]+f"_CA_model_greater_1_phase{phase}"+".tif")
+            fluor2name_tm = os.path.join(replicate_fullname, fluor_names[1]+f"_CA_model_greater_1_phase{phase}_TM_SPOTS"+".tif")
 
             if os.path.exists(fluor1name):
                 with tifffile.TiffFile(fluor1name) as tif:
@@ -142,28 +154,28 @@ def join_replicates(folder, fluor_names):
     colormap = matplotlib.cm.get_cmap("coolwarm")
 
     if len(N_fluor1) > 0:
-        imsave(folder + os.sep + f"model_{fluor_names[0]}.tif", cumsum_fluor1 / sum(N_fluor1), plugin="tifffile")
+        imsave(folder + os.sep + f"model_{fluor_names[0]}_{phase}.tif", cumsum_fluor1 / sum(N_fluor1), plugin="tifffile")
         color_img1 = np.zeros((30, 30, 3))
         color_fluor1 = cellmodeler.assign_color(cumsum_fluor1 / sum(N_fluor1), color_img1, colormap)
-        imsave(folder + os.sep + f"color_{fluor_names[0]}_n{sum(N_fluor1)}.png", color_fluor1)
+        imsave(folder + os.sep + f"color_{fluor_names[0]}_n{sum(N_fluor1)}_{phase}.png", color_fluor1)
 
     if len(N_fluor1_TM) > 0:
-        imsave(folder + os.sep + f"model_{fluor_names[0]}_TM_.tif", cumsum_fluor1_TM / sum(N_fluor1_TM), plugin="tifffile")
+        imsave(folder + os.sep + f"model_{fluor_names[0]}_TM__{phase}.tif", cumsum_fluor1_TM / sum(N_fluor1_TM), plugin="tifffile")
         color_img1_TM = np.zeros((30, 30, 3))
         color_fluor1_TM = cellmodeler.assign_color(cumsum_fluor1_TM / sum(N_fluor1_TM), color_img1_TM, colormap)
-        imsave(folder + os.sep + f"color_{fluor_names[0]}_TM_n{sum(N_fluor1_TM)}.png", color_fluor1_TM)
+        imsave(folder + os.sep + f"color_{fluor_names[0]}_TM_n{sum(N_fluor1_TM)}_{phase}.png", color_fluor1_TM)
 
     if len(N_fluor2) > 0:
-        imsave(folder + os.sep + f"model_{fluor_names[1]}.tif", cumsum_fluor2 / sum(N_fluor2), plugin="tifffile")
+        imsave(folder + os.sep + f"model_{fluor_names[1]}_{phase}.tif", cumsum_fluor2 / sum(N_fluor2), plugin="tifffile")
         color_img2 = np.zeros((30, 30, 3))
         color_fluor2 = cellmodeler.assign_color(cumsum_fluor2 / sum(N_fluor2), color_img2, colormap)
-        imsave(folder + os.sep + f"color_{fluor_names[1]}_n{sum(N_fluor2)}.png", color_fluor2)
+        imsave(folder + os.sep + f"color_{fluor_names[1]}_n{sum(N_fluor2)}_{phase}.png", color_fluor2)
 
     if len(N_fluor2_TM) > 0:
-        imsave(folder + os.sep + f"model_{fluor_names[1]}_TM_.tif", cumsum_fluor2_TM / sum(N_fluor2_TM), plugin="tifffile")
+        imsave(folder + os.sep + f"model_{fluor_names[1]}_TM__{phase}.tif", cumsum_fluor2_TM / sum(N_fluor2_TM), plugin="tifffile")
         color_img2_TM = np.zeros((30, 30, 3))
         color_fluor2_TM = cellmodeler.assign_color(cumsum_fluor2_TM / sum(N_fluor2_TM), color_img2_TM, colormap)
-        imsave(folder + os.sep + f"color_{fluor_names[1]}_TM_n{sum(N_fluor2_TM)}.png", color_fluor2_TM)
+        imsave(folder + os.sep + f"color_{fluor_names[1]}_TM_n{sum(N_fluor2_TM)}_{phase}.png", color_fluor2_TM)
 
 
 if __name__ == '__main__':
@@ -178,6 +190,7 @@ if __name__ == '__main__':
     fluornames = [parameters['fluor1'], parameters['fluor2']]
     basename = parameters['base']
     basetype = parameters['basetype']
+    membrane = parameters['membrane']
 
     sys.path.append(ehooke)
 
@@ -195,5 +208,8 @@ if __name__ == '__main__':
             continue
 
         print(condition)
-        run_batch_workflow(path, fluornames, basename, basetype)
-        join_replicates(path, fluornames)
+        #run_batch_workflow(path, fluornames, basename, basetype, membrane)
+        join_replicates(path, fluornames, (1,))
+        join_replicates(path, fluornames, (2,))
+        join_replicates(path, fluornames, (3,))
+        join_replicates(path, fluornames, (1,2,3))
