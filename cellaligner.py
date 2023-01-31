@@ -16,11 +16,21 @@ class CellAligner:
         - aligned fluor mask
     """
 
-    def __init__(self, cellmanagerobj):
+    def __init__(self, cellmanagerobj, fluorescence="Main"): 
         self.cellmanager = cellmanagerobj
 
+        if fluorescence not in ["Main", "Optional"]:
+            raise ValueError(f"Fluoresence argument can only be 'Main' or 'Optional', it was given {fluorescence}")
+        else:
+            self.fluor_channel = fluorescence
+
     def calculate_rotation_angle(self, ids):
-        binary = self.cellmanager.cells[ids].fluor * self.cellmanager.cells[ids].cell_mask
+
+        if self.fluor_channel == "Main":
+            binary = self.cellmanager.cells[ids].fluor * self.cellmanager.cells[ids].cell_mask 
+        elif self.fluor_channel == "Optional":
+            binary = self.cellmanager.cells[ids].optional * self.cellmanager.cells[ids].cell_mask 
+            
         outline = self.calculate_cell_outline(binary)
         major_axis = self.calculate_major_axis(outline)
         return self.calculate_axis_angle(major_axis)
@@ -31,8 +41,11 @@ class CellAligner:
             angle = self.calculate_rotation_angle(key)
             self.cellmanager.cells[key].angle_of_rotation = angle
             self.cellmanager.cells[key].aligned_cell_mask = rotate(self.cellmanager.cells[key].cell_mask, angle)
-            self.cellmanager.cells[key].aligned_fluor_mask = rotate(
-                self.cellmanager.cells[key].fluor * self.cellmanager.cells[key].cell_mask, angle)
+            
+            if self.fluor_channel == "Main":
+                self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].fluor * self.cellmanager.cells[key].cell_mask, angle) 
+            elif self.fluor_channel == "Optional":
+                self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].optional * self.cellmanager.cells[key].cell_mask, angle) 
 
     def save_aligned_cells(self, path=None):
         if path is None:
