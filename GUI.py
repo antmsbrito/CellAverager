@@ -108,7 +108,8 @@ class MainGUI(tk.Tk):
                      "fluor1": self.fluor1_var.get(),
                      "fluor2": self.fluor2_var.get(),
                      "base": self.base_var.get(),
-                     "basetype": self.basetype_var.get()}
+                     "basetype": self.basetype_var.get(),
+                     "membrane": self.membrane_var.get()}
 
         self.destroy()
 
