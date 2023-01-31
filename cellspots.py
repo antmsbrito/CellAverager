@@ -29,9 +29,9 @@ class Spots:
     def get_position(self, sp):
 
         # x axis is horizontal, right to left
-        x = float(sp.attrib['POSITION_X']) / 6.45  # px size!?
+        x = float(sp.attrib['POSITION_X'])  # px size!? TODO currently this has to be manually changed case by case
         # y axis is vertical UP to DOWN
-        y = float(sp.attrib['POSITION_Y']) / 6.45  # px size!?
+        y = float(sp.attrib['POSITION_Y'])  # px size!? TODO currently this has to be manually changed case by case
         return x, y
 
     def filterbox(self, box, align):
