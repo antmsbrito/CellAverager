@@ -64,7 +64,7 @@ class CellModeler:
         self.save_cell_model(savepath + f"model")
         self.model2color(savepath + f"color")
 
-    def create_cell_model_from_TM(self, xmlfile, savepath, align):
+    def create_cell_model_from_TM(self, xmlfile, savepath, align, cellcyle=False):
 
         spots = self.read_xml_spots(xmlfile)
 
@@ -72,24 +72,30 @@ class CellModeler:
             box = self.cellmanager.cells[key].box
             self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = spots.filterbox(box, align)
 
-        self.create_cell_model(1, 'greater', savepath)
+        if cellcyle:
+            self.create_cell_model(1, 'greater', (1,), savepath)
+            self.create_cell_model(1, 'greater', (2,), savepath)
+            self.create_cell_model(1, 'greater', (3,), savepath)
+        else:
+            self.create_cell_model(1, 'greater', (1,2,3), savepath)
 
-    def create_cell_model(self, spotnumber, operation, savepath):
+
+    def create_cell_model(self, spotnumber, operation, cellcycle, savepath):
 
         if operation == 'equal':
             selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots == spotnumber]
+                              self.cellmanager.cells[key].spots == spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
         elif operation == 'greater':
             selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots >= spotnumber]
+                              self.cellmanager.cells[key].spots >= spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
         elif operation == 'smaller':
             selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots <= spotnumber]
+                              self.cellmanager.cells[key].spots <= spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
         else:
             raise (ValueError(f"Unrecognized operation: {operation}"))
 
         if len(selected_cells) == 0:
-            print(f"No cells with {spotnumber} spots ", operation)
+            print(f"No cells in cell cycle phase {cellcycle} with {spotnumber} spots ", operation)
             return 0
 
         self.mean_x = int(np.median([s.aligned_fluor_mask.shape[0] for s in selected_cells]))
@@ -109,13 +115,13 @@ class CellModeler:
         # This has to be repeated and not a call to create cell model from ehooke because we filtered anucleates
         selected_cells = self.resize_cells(selected_cells)
         self.cell_model = self.create_cell_average(selected_cells)
-        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}")
+        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_phase{cellcycle}")
+        self.model2color(savepath + f"color_{operation}_{spotnumber}_phase{cellcycle}")
 
         new_cells = np.array([resize(c, (self.mean_x, self.mean_y)) for c in new_cells])
         self.cell_model = self.create_cell_average(new_cells)
-        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_TM_SPOTS")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}_TM_SPOTS")
+        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_phase{cellcycle}_TM_SPOTS")
+        self.model2color(savepath + f"color_{operation}_{spotnumber}_phase{cellcycle}_TM_SPOTS")
 
     def save_cell_model(self, path=None):
         if path is None:
