@@ -1,108 +1,59 @@
-import os
+import xml.etree.ElementTree as ET
+
 import numpy as np
 import matplotlib as mpl
-from tkinter import filedialog as fd
-import xml.etree.ElementTree as ET
-from skimage.io import imsave
-from skimage.transform import resize
-from skimage.filters import threshold_isodata
-from skimage.color import gray2rgb
-
 from skimage.draw import circle
-from skimage.transform import rotate
+from skimage.transform import resize, rotate
 
 from cellspots import Spots
 
-from matplotlib import pyplot as plt
-
-
 class CellModeler:
     """
-    This class is in charge of taking a cellmanager object from ehooke THAT HAS BEEN pre aligned
-    returns
-
+    Class that manages and creates cell models based on eHooke classes THAT HAVE BEEN PRE ALIGNED
+    There is support for an optional trackmate xml with spot detection to filter for spots
     """
-
-    def __init__(self, cellmanager):
-
+    def __init__(self, cellmanager, imagemanager, xmlfile:str|None=None) -> None:
+        
+        # Store ehooke classes 
         self.cellmanager = cellmanager
+        self.imagemanager = imagemanager
 
-        self.cell_model = None
-        self.color_model = None
-        self.mean_x = 0
-        self.mean_y = 0
-        self.number_of_cells = None
-
-    def resize_cells(self, cells):
-        tmp = []
-        for cell in cells:
-            tmp.append(resize(cell.aligned_fluor_mask, (self.mean_x, self.mean_y)))
-
-        return np.array(tmp)
-
-    def create_cell_average(self, cells):
-        model_cell = np.zeros((self.mean_x, self.mean_y))
-        for cell in np.array(cells):
-            model_cell += cell
-
-        model_cell /= float(len(cells))
-
-        return model_cell
-
-    def create_cell_model_from_ehooke(self, savepath):
-
-        self.mean_x = int(
-            np.median([self.cellmanager.cells[key].aligned_fluor_mask.shape[0] for key in self.cellmanager.cells]))
-        self.mean_y = int(
-            np.median([self.cellmanager.cells[key].aligned_fluor_mask.shape[1] for key in self.cellmanager.cells]))
-
-        self.number_of_cells = len(self.cellmanager.cells)
-        selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells]
-        selected_cells = self.resize_cells(selected_cells)
-        self.cell_model = self.create_cell_average(selected_cells)
-
-        self.save_cell_model(savepath + f"model")
-        self.model2color(savepath + f"color")
-
-    def create_cell_model_from_TM(self, xmlfile, savepath, align, cellcyle=False):
-
-        spots = self.read_xml_spots(xmlfile)
-
-        for key in self.cellmanager.cells:
-            box = self.cellmanager.cells[key].box
-            self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = spots.filterbox(box, align)
-
-        if cellcyle:
-            self.create_cell_model(1, 'greater', (1,), savepath)
-            self.create_cell_model(1, 'greater', (2,), savepath)
-            self.create_cell_model(1, 'greater', (3,), savepath)
+        # Check if xmlfile exists and if it does store the number of spots for each cell
+        if xmlfile:
+            self.spots = self.read_xml_spots(xmlfile)
+            for key in self.cellmanager.cells:
+                box = self.cellmanager.cells[key].box
+                self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = self.spots.filterbox(box, self.imagemanager.align_values)
         else:
-            self.create_cell_model(1, 'greater', (1,2,3), savepath)
-
-
-    def create_cell_model(self, spotnumber, operation, cellcycle, savepath):
-
-        if operation == 'equal':
-            selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots == spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
-        elif operation == 'greater':
-            selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots >= spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
-        elif operation == 'smaller':
-            selected_cells = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                              self.cellmanager.cells[key].spots <= spotnumber and self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle]
+            self.spots = None
+            
+    def select_cells(self, minspots:int|np.inf=1, maxspots:int|np.inf=np.inf, cellcycle:tuple=(0,1,2,3)) -> list:
+        """
+        This function builds a selection of cells based on spot number and desired cell cycle phase
+        In the case of no spot detection it ignores the min and max spot given
+        In the case of no cell cycle phase, all cells are phase 0
+        """
+        
+        if self.spots:
+            selection = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
+                        (maxspots>self.cellmanager.cells[key].spots>minspots) and 
+                        (self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle)]
         else:
-            raise (ValueError(f"Unrecognized operation: {operation}"))
+            selection = [self.cellmanager.cells[key] for key in self.cellmanager.cells if 
+                        (self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle)]
 
-        if len(selected_cells) == 0:
-            print(f"No cells in cell cycle phase {cellcycle} with {spotnumber} spots ", operation)
-            return 0
+        return selection
 
-        self.mean_x = int(np.median([s.aligned_fluor_mask.shape[0] for s in selected_cells]))
-        self.mean_y = int(np.median([s.aligned_fluor_mask.shape[1] for s in selected_cells]))
-        self.number_of_cells = len(selected_cells)
+    def build_spot_model(self, selected_cells:list) -> np.ndarray:
+        """
+        This functions builds a cell model based on spot localization within each cell
+        Returns the empty array if there is not spot detection xml
+        """
 
-        new_cells = []
+        if not self.spots:
+            return np.array([])
+
+        spot_cells = []
         for cell in selected_cells:
             blank = np.zeros(cell.aligned_fluor_mask.shape)
             for c in cell.spots_coords:
@@ -110,39 +61,44 @@ class CellModeler:
                 rr, cc = circle(yc, xc, 1, shape=blank.shape)
                 blank[rr, cc] = 1
             blank = rotate(blank, cell.angle_of_rotation)
-            new_cells.append(blank)
+            spot_cells.append(blank)
 
-        # This has to be repeated and not a call to create cell model from ehooke because we filtered anucleates
-        selected_cells = self.resize_cells(selected_cells)
-        self.cell_model = self.create_cell_average(selected_cells)
-        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_phase{cellcycle}")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}_phase{cellcycle}")
+        x_size = int(np.median([s.shape[0] for s in spot_cells]))
+        y_size = int(np.median([s.shape[1] for s in spot_cells]))
 
-        new_cells = np.array([resize(c, (self.mean_x, self.mean_y)) for c in new_cells])
-        self.cell_model = self.create_cell_average(new_cells)
-        self.save_cell_model(savepath + f"model_{operation}_{spotnumber}_phase{cellcycle}_TM_SPOTS")
-        self.model2color(savepath + f"color_{operation}_{spotnumber}_phase{cellcycle}_TM_SPOTS")
+        resized_cells = self.resize_arr(spot_cells, x_size, y_size)
+        cell_model = self.create_average(resized_cells)
 
-    def save_cell_model(self, path=None):
-        if path is None:
-            path = fd.asksaveasfilename()
+        return cell_model
 
-        imsave(path + ".tif", self.cell_model, plugin="tifffile", imagej=False, description=str(self.number_of_cells))
+    def build_average_model(self, selected_cells:list) -> np.ndarray:
+        """
+        This function builds a cell model based on the average of the aligned fluorescence 
+        """
 
-    def model2color(self, savepath):
+        aligned_fluor = [selected_cells[key].aligned_fluor_mask for key in selected_cells]
 
-        mask = self.cell_model > threshold_isodata(self.cell_model)
-        filtered = self.cell_model * mask
+        x_size = int(np.median([s.shape[0] for s in aligned_fluor]))
+        y_size = int(np.median([s.shape[1] for s in aligned_fluor]))
 
-        colormap = mpl.cm.get_cmap("coolwarm")
-        color_img = np.zeros(np.shape(gray2rgb(filtered)))
+        resized_cells = self.resize_arr(aligned_fluor, x_size, y_size)
+        cell_model = self.create_average(resized_cells)
 
-        self.color_model = self.assign_color(filtered, color_img, colormap)
-
-        imsave(savepath + f"_n{self.number_of_cells}.png", self.color_model)
+        return cell_model
 
     @staticmethod
-    def read_xml_spots(xmlfile):
+    def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:
+        resized = np.zeros(xsize, ysize, len(imgarr))
+        for idx, img in enumerate(imgarr):
+            resized[:,:,idx] = resize(img, (xsize, ysize))
+        return resized
+
+    @staticmethod
+    def create_average(imgarr:np.ndarray)->np.ndarray:
+        return np.average(imgarr, axis=2)
+        
+    @staticmethod
+    def read_xml_spots(xmlfile:str)->Spots:
         # Read xml file into memory
         root = ET.parse(xmlfile).getroot()
         model_child = root[0]  # This is trackmate model object
@@ -150,17 +106,3 @@ class CellModeler:
         quality = float(root[1][4][0].attrib['value'])
 
         return Spots(allspots, quality)
-
-    @staticmethod
-    def assign_color(modelmasked, outimage, cmap):
-        norm = mpl.colors.Normalize(vmin=np.amin(modelmasked[np.nonzero(modelmasked)]), vmax=np.amax(modelmasked))
-        for i in range(modelmasked.shape[0]):
-            for ii in range(modelmasked.shape[1]):
-                px = modelmasked[i, ii]
-                if np.abs(px) < 1e-3:
-                    outimage[i, ii] = (0, 0, 0)
-                else:
-                    rgba = cmap(norm(px))
-                    outimage[i, ii] = (rgba[0], rgba[1], rgba[2])
-
-        return outimage
