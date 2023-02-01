@@ -25,8 +25,13 @@ class Replicate:
 
         if os.path.exists(fluor2path):
             self.fluor2path = fluor2path
+        else:
+            self.fluor2path = None
+
         if os.path.exists(membranepath):
             self.membpath = membranepath
+        else:
+            self.membpath = None
 
         # Check for an xml trackmate file
         if os.path.exists(self.fluor1path.replace('.tif', '.xml')):
@@ -34,10 +39,11 @@ class Replicate:
         else: 
             self.xml1path = None
 
-        if os.path.exists(self.fluor2path.replace('.tif', '.xml')):
-            self.xml2path = self.fluor2path.replace('.tif', '.xml')
-        else: 
-            self.xml2path = None
+        if fluor2path:
+            if os.path.exists(self.fluor2path.replace('.tif', '.xml')):
+                self.xml2path = self.fluor2path.replace('.tif', '.xml')
+            else: 
+                self.xml2path = None
 
         # Store ehooke base classes 
         self.imagemanager = [None, None]
@@ -52,7 +58,7 @@ class Replicate:
         if fluor2path:
             self.run_eHooke(channel=2)
         
-        self.build_models()
+        self.build_CA()
         
     def run_eHooke(self, channel:int)->None:
         """
@@ -110,7 +116,7 @@ class Replicate:
         self.cellmanager[channel-1] = cel
         self.imagemanager[channel-1] = imm
 
-    def build_models(self,)->None:
+    def build_CA(self,)->None:
         """
         Builds cell model objects for both fluorescences (if possible)
         """
@@ -128,6 +134,24 @@ class Replicate:
                 self.cellaligner[1] = CellAligner(self.cellmanager[1], "Main")
                 self.cellmodeler[1] = CellModeler(self.cellmanager[1], self.imagemanager[1], self.xml2path)    
         
+    def buildmodel(self, channel=1, modeltype='spot', minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
+        """
+        Builds a model of a channel with selected cells
+        Returns number of cells used and the model in question
+        """
+
+        cm_object = self.cellmodeler[channel-1]
+
+        if cm_object:
+            cells = cm_object.select_cells(minspots, maxspots, cellcycle)
+            
+            if modeltype == "spot":
+                return len(cells), cm_object.build_spot_model(cells)
+            elif modeltype == "average":
+                return len(cells), cm_object.build_average_model(cells)
+
+        else:
+            return 0, None
 
 
 class ExperimentalCondition:
@@ -168,3 +192,31 @@ class ExperimentalCondition:
                 repli = Replicate(fluor1_path, fluor2_path, membrane_path, base_path, self.base_type)
 
                 self.replicates.append(repli)
+
+    def askformodel(self, channel=1, modeltype='spot', minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
+
+        if channel not in [1,2]:
+            raise ValueError(f"Only 1 or 2 are valid channels. You provided {channel}")
+
+        if modeltype not in ['spot', 'average']:
+            raise ValueError(f"Only 'spot' or 'average' are valid models. You provided {modeltype}")
+
+        if minspots>maxspots:
+            minspots, maxspots = maxspots, minspots
+
+        totalN = 0
+        replicate_models = []
+
+        for repli in self.replicates:
+            n, model = repli.buildmodel(channel, modeltype, minspots, maxspots, cellcycle)
+            totalN += n
+            replicate_models.append(model)
+
+        
+        x_size = int(np.median([s.shape[0] for s in replicate_models]))
+        y_size = int(np.median([s.shape[1] for s in replicate_models]))
+
+        resized_cells = self.resize_arr(replicate_models, x_size, y_size)
+        final_model = np.sum(resized_cells, axis=2) / totalN
+
+        return final_model
