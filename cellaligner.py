@@ -26,6 +26,8 @@ class CellAligner:
         else:
             self.fluor_channel = fluorescence
 
+        self.align_cells()
+
     def calculate_rotation_angle(self, ids)->float:
         """
         Calculate rotation angle for a single cell
