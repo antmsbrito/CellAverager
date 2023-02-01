@@ -29,27 +29,6 @@ class CellModeler:
         else:
             self.spots = None
 
-        self.spot_models = [None, None, None, None]
-        self.average_models = [None, None, None, None]
-
-        self.build_spotmodels()
-        self.build_avgmodels()
-
-    def build_spotmodels(self,) -> None:
-        all_cells = self.select_cells()
-        self.spot_models[0] = self.build_spot_model(all_cells)
-
-        for phase in [1,2,3]:
-            cells = self.select_cells(cellcycle=(phase,))
-            self.spot_models[phase] = self.build_spot_model(cells)
-
-    def build_avgmodels(self,) -> None:
-        all_cells = self.select_cells()
-        self.average_models[0] = self.build_average_model(all_cells)
-        
-        for phase in [1,2,3]:
-            cells = self.select_cells(cellcycle=(phase,))
-            self.average_models[phase] = self.build_average_model(cells)
             
     def select_cells(self, minspots:int|np.inf=1, maxspots:int|np.inf=np.inf, cellcycle:tuple=(0,1,2,3)) -> list:
         """
