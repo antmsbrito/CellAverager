@@ -89,7 +89,7 @@ class CellAligner:
         eigenval = pca.explained_variance_[0]
 
         return [[pos_x - eigenvector_x * eigenval, pos_y - eigenvector_y * eigenval],
-        [pos_x + eigenvector_x * eigenval, pos_y + eigenvector_y * eigenval]], pca.explained_variance[0] / pca.explained_variance[1]
+        [pos_x + eigenvector_x * eigenval, pos_y + eigenvector_y * eigenval]], pca.explained_variance_[0] / pca.explained_variance_[1]
 
     @staticmethod
     def calculate_axis_angle(major_axis):
