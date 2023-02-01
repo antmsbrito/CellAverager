@@ -52,6 +52,8 @@ class Replicate:
         if fluor2path:
             self.run_eHooke(channel=2)
         
+        self.build_models()
+        
     def run_eHooke(self, channel:int)->None:
         """
         Runs eHooke ONCE for the desired fluorescence channel
@@ -133,7 +135,7 @@ class ExperimentalCondition:
     This class controls and stores paths and models for all the replicates in an experimental condition
     """
 
-    def __init__(self, root_path:str, fluor1:str, fluor2:str|None, memb_name:str|None, base_name:str, base_type:str)->None:
+    def __init__(self, root_path, fluor1, fluor2, memb_name, base_name, base_type)->None:
 
         self.root_path = root_path
 
@@ -166,37 +168,3 @@ class ExperimentalCondition:
                 repli = Replicate(fluor1_path, fluor2_path, membrane_path, base_path, self.base_type)
 
                 self.replicates.append(repli)
-        
-
-    def join_replicates(self)->None:
-
-        for f_channel in range(2):
-            # This checks if the cellmodeler object is not none. If it is, there was no second fluorescence
-            if not self.replicates[0].cellmodeler[f_channel]:
-                continue
-
-            for phase in range(4):
-                if not self.replicates[0].cellmodeler[f_channel].spot_models[phase] or 
-
-
-                spotmodels = [repli.cellmodeler[f_channel].spot_models[phase] * repli.cellmodeler[f_channel].N_spot_models for repli in self.replicates]
-                Nspotmodels = np.sum([repli.cellmodeler[f_channel].N_spot_models for repli in self.replicates])
-                x_size = int(np.median([s.shape[0] for s in spotmodels]))
-                y_size = int(np.median([s.shape[1] for s in spotmodels]))
-                resized_cells = self.resize_arr(spotmodels, x_size, y_size)
-                self.final_spotmodel[f_channel][phase] = np.sum(resized_cells, axis=2) * Nspotmodels
-
-                avgmodel = [repli.cellmodeler[f_channel].average_models[phase] * repli.cellmodeler[f_channel].N_average_models for repli in self.replicates]
-                Naveragemodels = np.sum([repli.cellmodeler[f_channel].N_average_models for repli in self.replicates])
-                x_size = int(np.median([s.shape[0] for s in avgmodel]))
-                y_size = int(np.median([s.shape[1] for s in avgmodel]))
-                resized_cells = self.resize_arr(avgmodel, x_size, y_size)
-                self.final_spotmodel[f_channel][phase] = np.sum(resized_cells, axis=2) * Naveragemodels
-
-    @staticmethod
-    def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:
-        resized = np.zeros(xsize, ysize, len(imgarr))
-        for idx, img in enumerate(imgarr):
-            resized[:,:,idx] = resize(img, (xsize, ysize))
-        return resized
-
