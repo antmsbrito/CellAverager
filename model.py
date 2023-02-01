@@ -18,12 +18,16 @@ class Replicate:
     def __init__(self,fluor1path:str, fluor2path:str|None, membranepath:str|None, basepath:str, base_type:str)->None:
         
         self.fluor1path = fluor1path
-        self.fluor2path = fluor2path
-
-        self.membpath = membranepath
-
         self.basepath = basepath
         self.base_type = base_type
+
+        self.fluor2path = None
+        if os.path.exists(fluor2path):
+            self.fluor2path = fluor2path
+        
+        self.membpath = None
+        if os.path.exists(membranepath):
+            self.membpath = membranepath
 
         # Check for an xml trackmate file
         if os.path.exists(self.fluor1path.replace('.tif', '.xml')):
@@ -142,7 +146,22 @@ class ExperimentalCondition:
         self.base_name = base_name
         self.base_type = base_type
         
+        self.replicates = []
 
-        
+        self.search_root()
+
+    def search_root(self)->None:
+
+        for replicate in os.listdir(self.root_path):
+            replicate_fullname = os.path.join(self.root_path, replicate)
+            if os.path.isdir(replicate_fullname):
+                base_path = os.path.join(replicate_fullname, self.base_name + '.tif')
+                fluor1_path = os.path.join(replicate_fullname, self.fluor1_name + '.tif')
+                fluor2_path = os.path.join(replicate_fullname, self.fluor2_name + '.tif')
+                membrane_path = os.path.join(replicate_fullname, self.memb_name + '.tif')
+
+                repli = Replicate(fluor1_path, fluor2_path, membrane_path, base_path, self.base_type)
+
+                self.replicates.append(repli)
         
 
