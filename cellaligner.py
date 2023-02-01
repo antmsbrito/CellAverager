@@ -11,12 +11,14 @@ from tkinter import filedialog as fd
 class CellAligner:
     """
     This class is in charge of taking a cellmanager object from ehooke and align all cells
-    returns a cell manager object with cell objects with 2 new attributes
+    The cell manager object will be changed to have cell objects with new attributes
         - aligned cell mask
         - aligned fluor mask
+        - angle of rotation
+        - ratio of major and minor axis 
     """
 
-    def __init__(self, cellmanagerobj, fluorescence="Main"): 
+    def __init__(self, cellmanagerobj, fluorescence:str="Main")->None: 
         self.cellmanager = cellmanagerobj
 
         if fluorescence not in ["Main", "Optional"]:
@@ -24,7 +26,11 @@ class CellAligner:
         else:
             self.fluor_channel = fluorescence
 
-    def calculate_rotation_angle(self, ids):
+    def calculate_rotation_angle(self, ids)->float:
+        """
+        Calculate rotation angle for a single cell
+        Returns the angle and the ratio of major and minor axis length
+        """
 
         if self.fluor_channel == "Main":
             binary = self.cellmanager.cells[ids].fluor * self.cellmanager.cells[ids].cell_mask 
@@ -32,22 +38,28 @@ class CellAligner:
             binary = self.cellmanager.cells[ids].optional * self.cellmanager.cells[ids].cell_mask 
             
         outline = self.calculate_cell_outline(binary)
-        major_axis = self.calculate_major_axis(outline)
-        return self.calculate_axis_angle(major_axis)
+        major_axis, ratio = self.calculate_major_axis(outline)
 
-    def align_cells(self):
+        return self.calculate_axis_angle(major_axis), ratio
 
+    def align_cells(self)->None:
+        """
+        Aligns all cells and builds new attr on cell manager objects
+        """
         for key in self.cellmanager.cells:
-            angle = self.calculate_rotation_angle(key)
+
+            angle, axis_ratio = self.calculate_rotation_angle(key)
+            self.cellmanager.cells[key].axis_ratio = axis_ratio
             self.cellmanager.cells[key].angle_of_rotation = angle
             self.cellmanager.cells[key].aligned_cell_mask = rotate(self.cellmanager.cells[key].cell_mask, angle)
-            
+
             if self.fluor_channel == "Main":
                 self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].fluor * self.cellmanager.cells[key].cell_mask, angle) 
             elif self.fluor_channel == "Optional":
                 self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].optional * self.cellmanager.cells[key].cell_mask, angle) 
 
-    def save_aligned_cells(self, path=None):
+    def save_aligned_cells(self, path:str=None)->None:
+        "For QC purposes"
         if path is None:
             path = fd.askdirectory(title="SAVE ALIGNED CELLS")
 
@@ -67,7 +79,7 @@ class CellAligner:
         y = [[val] for val in y]
         coords = np.concatenate((x, y), axis=1)
 
-        pca = PCA(n_components=1)
+        pca = PCA(n_components=2)
         pca.fit(coords)
 
         pos_x, pos_y = pca.mean_
@@ -75,7 +87,7 @@ class CellAligner:
         eigenval = pca.explained_variance_[0]
 
         return [[pos_x - eigenvector_x * eigenval, pos_y - eigenvector_y * eigenval],
-                [pos_x + eigenvector_x * eigenval, pos_y + eigenvector_y * eigenval]]
+        [pos_x + eigenvector_x * eigenval, pos_y + eigenvector_y * eigenval]], pca.explained_variance[0] / pca.explained_variance[1]
 
     @staticmethod
     def calculate_axis_angle(major_axis):
