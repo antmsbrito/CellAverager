@@ -11,6 +11,8 @@ class CellModeler:
     """
     Class that manages and creates cell models based on eHooke classes THAT HAVE BEEN PRE ALIGNED
     There is support for an optional trackmate xml with spot detection to filter for spots
+    By default always tries to compute models with cells with more than 1 spot 
+    By default always checks for cell cycle
     """
     def __init__(self, cellmanager, imagemanager, xmlfile:str|None=None) -> None:
         
@@ -26,6 +28,28 @@ class CellModeler:
                 self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = self.spots.filterbox(box, self.imagemanager.align_values)
         else:
             self.spots = None
+
+        self.spot_models = [None, None, None, None]
+        self.average_models = [None, None, None, None]
+
+        self.build_spotmodels()
+        self.build_avgmodels()
+
+    def build_spotmodels(self,) -> None:
+        all_cells = self.select_cells()
+        self.spot_models[0] = self.build_spot_model(all_cells)
+
+        for phase in [1,2,3]:
+            cells = self.select_cells(cellcycle=(phase,))
+            self.spot_models[phase] = self.build_spot_model(cells)
+
+    def build_avgmodels(self,) -> None:
+        all_cells = self.select_cells()
+        self.average_models[0] = self.build_average_model(all_cells)
+        
+        for phase in [1,2,3]:
+            cells = self.select_cells(cellcycle=(phase,))
+            self.average_models[phase] = self.build_average_model(cells)
             
     def select_cells(self, minspots:int|np.inf=1, maxspots:int|np.inf=np.inf, cellcycle:tuple=(0,1,2,3)) -> list:
         """
