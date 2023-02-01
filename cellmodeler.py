@@ -14,7 +14,7 @@ class CellModeler:
     By default always tries to compute models with cells with more than 1 spot 
     By default always checks for cell cycle
     """
-    def __init__(self, cellmanager, imagemanager, xmlfile:str|None=None) -> None:
+    def __init__(self, cellmanager, imagemanager, xmlfile=None) -> None:
         
         # Store ehooke classes 
         self.cellmanager = cellmanager
@@ -30,7 +30,7 @@ class CellModeler:
             self.spots = None
 
             
-    def select_cells(self, minspots:int|np.inf=1, maxspots:int|np.inf=np.inf, cellcycle:tuple=(0,1,2,3)) -> list:
+    def select_cells(self, minspots=1, maxspots=np.inf, cellcycle:tuple=(0,1,2,3)) -> list:
         """
         This function builds a selection of cells based on spot number and desired cell cycle phase
         In the case of no spot detection it ignores the min and max spot given
