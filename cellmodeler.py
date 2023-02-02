@@ -96,7 +96,7 @@ class CellModeler:
 
     @staticmethod
     def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:
-        resized = np.zeros(xsize, ysize, len(imgarr))
+        resized = np.zeros((xsize, ysize, len(imgarr)))
         for idx, img in enumerate(imgarr):
             resized[:,:,idx] = resize(img, (xsize, ysize))
         return resized
