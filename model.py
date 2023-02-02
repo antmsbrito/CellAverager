@@ -189,7 +189,7 @@ class ExperimentalCondition:
                 fluor2_path = os.path.join(replicate_fullname, self.fluor2_name + '.tif')
                 membrane_path = os.path.join(replicate_fullname, self.memb_name + '.tif')
 
-                repli = Replicate(fluor1_path, fluor2_path, membrane_path, base_path, self.base_type)
+                repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path)
 
                 self.replicates.append(repli)
 
