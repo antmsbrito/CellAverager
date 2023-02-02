@@ -1,4 +1,5 @@
 import os
+import multiprocessing as mp
 
 import numpy as np
 from skimage.transform import resize
@@ -101,9 +102,9 @@ class Replicate:
         seg.save_labels(filename=os.path.join(os.path.dirname(self.basepath), 'Labels'))
 
         cel = CellManager(par)
-        cel.compute_cells(par, imm, seg)
-        cel.process_cells(par.cellprocessingparams, imm)
-        cel.overlay_cells(imm)
+        cel.compute_cells(par, imm, seg);
+        cel.process_cells(par.cellprocessingparams, imm);
+        cel.overlay_cells(imm);
 
         # If there is membrane, also do cell cycle
         if self.membpath:
@@ -220,3 +221,10 @@ class ExperimentalCondition:
         final_model = np.sum(resized_cells, axis=2) / totalN
 
         return final_model
+
+    @staticmethod
+    def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:
+        resized = np.zeros((xsize, ysize, len(imgarr)))
+        for idx, img in enumerate(imgarr):
+            resized[:,:,idx] = resize(img, (xsize, ysize))
+        return resized
