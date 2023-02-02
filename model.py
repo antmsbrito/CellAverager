@@ -172,27 +172,30 @@ class ExperimentalCondition:
         self.base_name = base_name
         self.base_type = base_type
         
-        self.replicates = []
-
-        self.final_spotmodel = [[None, None, None, None],[None, None, None, None]]
-        self.final_averagemodel = [[None, None, None, None],[None, None, None, None]]
-
+        self.replicates = None
 
         self.search_root()
 
     def search_root(self)->None:
+        
+        replicate_files = list(os.listdir(self.root_path))
+        with mp.Pool() as p:
+            self.replicates = p.map(self.read_replicate, replicate_files)
 
-        for replicate in os.listdir(self.root_path):
-            replicate_fullname = os.path.join(self.root_path, replicate)
-            if os.path.isdir(replicate_fullname):
-                base_path = os.path.join(replicate_fullname, self.base_name + '.tif')
-                fluor1_path = os.path.join(replicate_fullname, self.fluor1_name + '.tif')
-                fluor2_path = os.path.join(replicate_fullname, self.fluor2_name + '.tif')
-                membrane_path = os.path.join(replicate_fullname, self.memb_name + '.tif')
 
-                repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path)
+    def read_replicate(self, replicate):
+        replicate_fullname = os.path.join(self.root_path, replicate)
+        if os.path.isdir(replicate_fullname):
+            base_path = os.path.join(replicate_fullname, self.base_name + '.tif')
+            fluor1_path = os.path.join(replicate_fullname, self.fluor1_name + '.tif')
+            fluor2_path = os.path.join(replicate_fullname, self.fluor2_name + '.tif')
+            membrane_path = os.path.join(replicate_fullname, self.memb_name + '.tif')
 
-                self.replicates.append(repli)
+            repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path)
+
+            return repli
+        else:
+            return None
 
     def askformodel(self, channel=1, modeltype='spot', minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
 
@@ -209,11 +212,12 @@ class ExperimentalCondition:
         replicate_models = []
 
         for repli in self.replicates:
-            n, model = repli.buildmodel(channel, modeltype, minspots, maxspots, cellcycle)
-            totalN += n
-            replicate_models.append(model)
+            if repli:
+                n, model = repli.buildmodel(channel, modeltype, minspots, maxspots, cellcycle)
+                totalN += n
+                replicate_models.append(model)
 
-        
+            
         x_size = int(np.median([s.shape[0] for s in replicate_models]))
         y_size = int(np.median([s.shape[1] for s in replicate_models]))
 
