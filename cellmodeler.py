@@ -55,6 +55,8 @@ class CellModeler:
 
         if not self.spots:
             return np.array([])
+        if len(selected_cells) == 0:
+            return np.array([])
 
         spot_cells = []
         for cell in selected_cells:
@@ -78,6 +80,9 @@ class CellModeler:
         """
         This function builds a cell model based on the average of the aligned fluorescence 
         """
+
+        if len(selected_cells) == 0:
+            return np.array([])
 
         aligned_fluor = [selected_cells[key].aligned_fluor_mask for key in selected_cells]
 
