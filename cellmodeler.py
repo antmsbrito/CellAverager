@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-
+import math
 import numpy as np
 import matplotlib as mpl
 from skimage.draw import circle
@@ -19,6 +19,8 @@ class CellModeler:
         # Store ehooke classes 
         self.cellmanager = cellmanager
         self.imagemanager = imagemanager
+        
+        self.total_cells = len(self.cellmanager.cells)
 
         # Check if xmlfile exists and if it does store the number of spots for each cell
         if xmlfile:
@@ -39,13 +41,16 @@ class CellModeler:
         
         if self.spots:
             selection = [self.cellmanager.cells[key] for key in self.cellmanager.cells if
-                        (maxspots>self.cellmanager.cells[key].spots>minspots) and 
+                        (maxspots>self.cellmanager.cells[key].spots>=minspots) and 
                         (self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle)]
+            n_spots = sum([s.spots for s in selection])
+
         else:
             selection = [self.cellmanager.cells[key] for key in self.cellmanager.cells if 
                         (self.cellmanager.cells[key].stats["Cell Cycle Phase"] in cellcycle)]
-
-        return selection
+            n_spots = 0
+        
+        return selection, n_spots
 
     def build_spot_model(self, selected_cells:list) -> np.ndarray:
         """
@@ -83,8 +88,8 @@ class CellModeler:
 
         if len(selected_cells) == 0:
             return np.array([])
-
-        aligned_fluor = [selected_cells[key].aligned_fluor_mask for key in selected_cells]
+        
+        aligned_fluor = [c.aligned_fluor_mask for c in selected_cells]
 
         x_size = int(np.median([s.shape[0] for s in aligned_fluor]))
         y_size = int(np.median([s.shape[1] for s in aligned_fluor]))
@@ -93,6 +98,31 @@ class CellModeler:
         cell_model = self.create_average(resized_cells)
 
         return cell_model
+    
+    def scatter_coords(self, selected_cells):
+        
+        if not self.spots:
+            return np.array([]), np.array([])
+        if len(selected_cells) == 0:
+            return np.array([]), np.array([])
+        
+        x_size = np.median([s.aligned_fluor_mask.shape[0] for s in selected_cells])
+        y_size = np.median([s.aligned_fluor_mask.shape[1] for s in selected_cells])
+        
+        x_array = []
+        y_array = []
+        for cell in selected_cells:
+            cy = cell.aligned_fluor_mask.shape[1] / 2 - 0.5
+            cx = cell.aligned_fluor_mask.shape[0] / 2 - 0.5
+            angle = cell.angle_of_rotation
+            for c in cell.spots_coords:
+                xc, yc = c
+                r_x = cx + math.cos(angle) * (xc - cx) - math.sin(angle) * (yc - cy)
+                r_y = cy + math.sin(angle) * (xc - cx) + math.cos(angle) * (yc - cy)
+                x_array.append(r_x*(x_size/cell.aligned_fluor_mask.shape[0]))
+                y_array.append(r_y*(y_size/cell.aligned_fluor_mask.shape[1]))
+
+        return x_array, y_array
 
     @staticmethod
     def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:

@@ -40,7 +40,7 @@ class Replicate:
         else: 
             self.xml1path = None
 
-        if fluor2path:
+        if self.fluor2path:
             if os.path.exists(self.fluor2path.replace('.tif', '.xml')):
                 self.xml2path = self.fluor2path.replace('.tif', '.xml')
             else: 
@@ -139,22 +139,35 @@ class Replicate:
         """
         Builds a model of a channel with selected cells
         Returns number of cells used and the model in question
+        selected_cells, total_cells, n_spots, model
         """
 
         cm_object = self.cellmodeler[channel-1]
 
         if cm_object:
-            cells = cm_object.select_cells(minspots, maxspots, cellcycle)
+            total_cells = cm_object.total_cells
+            cells, n_spots = cm_object.select_cells(minspots, maxspots, cellcycle)
+            selected_cells = len(cells)
             
             if modeltype == "spot":
-                return len(cells), cm_object.build_spot_model(cells)
+                return selected_cells, total_cells, n_spots, cm_object.build_spot_model(cells)
             elif modeltype == "average":
-                return len(cells), cm_object.build_average_model(cells)
+                return selected_cells, total_cells, 0, cm_object.build_average_model(cells)
 
         else:
-            return 0, None
+            return 0, 0, 0, None
+    
+    def get_spot_coords(self, channel=1, minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
+        
+        cm_object = self.cellmodeler[channel-1]
 
+        if cm_object:
+            cells, n_spots = cm_object.select_cells(minspots, maxspots, cellcycle)
+            return cm_object.scatter_coords(cells)
 
+        else:
+            return None,None
+        
 class ExperimentalCondition:
     """
     This class controls and stores paths and models for all the replicates in an experimental condition
@@ -179,9 +192,11 @@ class ExperimentalCondition:
     def search_root(self)->None:
         
         replicate_files = list(os.listdir(self.root_path))
+        replicate_files = list(filter(str.isdigit,replicate_files))
+        #self.replicates = map(self.read_replicate, replicate_files)
         with mp.Pool() as p:
             self.replicates = p.map(self.read_replicate, replicate_files)
-
+        
 
     def read_replicate(self, replicate):
         replicate_fullname = os.path.join(self.root_path, replicate)
@@ -190,7 +205,7 @@ class ExperimentalCondition:
             fluor1_path = os.path.join(replicate_fullname, self.fluor1_name + '.tif')
             fluor2_path = os.path.join(replicate_fullname, self.fluor2_name + '.tif')
             membrane_path = os.path.join(replicate_fullname, self.memb_name + '.tif')
-
+            
             repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path)
 
             return repli
@@ -209,22 +224,37 @@ class ExperimentalCondition:
             minspots, maxspots = maxspots, minspots
 
         totalN = 0
+        totalCells = 0
+        totalSpots = 0
         replicate_models = []
 
         for repli in self.replicates:
             if repli:
-                n, model = repli.buildmodel(channel, modeltype, minspots, maxspots, cellcycle)
-                totalN += n
-                replicate_models.append(model)
+                selected_cells, total_cells, n_spots, model = repli.buildmodel(channel, modeltype, minspots, maxspots, cellcycle)
+                totalN += selected_cells
+                totalCells += total_cells
+                totalSpots += n_spots
+                replicate_models.append(model*selected_cells)
 
-            
         x_size = int(np.median([s.shape[0] for s in replicate_models]))
         y_size = int(np.median([s.shape[1] for s in replicate_models]))
 
         resized_cells = self.resize_arr(replicate_models, x_size, y_size)
         final_model = np.sum(resized_cells, axis=2) / totalN
 
-        return final_model
+        return totalN, totalCells, totalSpots, final_model
+    
+    def askforscatter(self,channel=1, minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
+        
+        x = np.array([])
+        y = np.array([])
+        for repli in self.replicates:
+            if repli:
+                xcoords,ycoords = repli.get_spot_coords(channel=channel, minspots=minspots, maxspots=maxspots, cellcycle=cellcycle)
+                x = np.concatenate([x,xcoords])
+                y = np.concatenate([y,ycoords])
+        return x,y
+    
 
     @staticmethod
     def resize_arr(imgarr:list, xsize:int, ysize:int)->np.ndarray:
