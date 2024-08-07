@@ -5,7 +5,8 @@ import matplotlib as mpl
 from skimage.draw import circle
 from skimage.transform import resize, rotate
 
-from cellspots import Spots
+#from cellspots import Spots
+from cellspotsNewXML import Spots as SpotsV2
 
 class CellModeler:
     """
@@ -26,8 +27,13 @@ class CellModeler:
         if xmlfile:
             self.spots = self.read_xml_spots(xmlfile)
             for key in self.cellmanager.cells:
-                box = self.cellmanager.cells[key].box
-                self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = self.spots.filterbox(box, self.imagemanager.align_values)
+                if self.cellmanager.cells[key].axis_ratio:
+                    box = self.cellmanager.cells[key].box
+                    #self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = self.spots.filterbox(box, self.imagemanager.align_values)
+                    # TODO stardistlabelsmight not exist
+                    self.cellmanager.cells[key].spots, self.cellmanager.cells[key].spots_coords = self.spots.filterlabel(box,self.cellmanager.cells[key].label,self.imagemanager.stardist_labels)
+                else:
+                    self.cellmanager.cells[key].spots = -1
         else:
             self.spots = None
 
@@ -65,7 +71,7 @@ class CellModeler:
 
         spot_cells = []
         for cell in selected_cells:
-            blank = np.zeros(cell.aligned_fluor_mask.shape)
+            blank = np.zeros([cell.aligned_fluor_mask.shape[0]-8,cell.aligned_fluor_mask.shape[1]-8]) # TODO HARDCODED 4
             for c in cell.spots_coords:
                 xc, yc = c
                 rr, cc = circle(yc, xc, 1, shape=blank.shape)
@@ -134,7 +140,8 @@ class CellModeler:
     @staticmethod
     def create_average(imgarr:np.ndarray)->np.ndarray:
         return np.average(imgarr, axis=2)
-        
+
+    """
     @staticmethod
     def read_xml_spots(xmlfile:str)->Spots:
         # Read xml file into memory
@@ -144,3 +151,13 @@ class CellModeler:
         quality = float(root[1][4][0].attrib['value'])
 
         return Spots(allspots, quality)
+    """   
+    @staticmethod
+    def read_xml_spots(xmlfile:str)->SpotsV2:
+        # Read xml file into memory
+        root = ET.parse(xmlfile).getroot()
+        model_child = root[1]  # This is trackmate model object
+        allspots = model_child[1]  # This is the spot xml node
+
+        return SpotsV2(allspots)
+    
