@@ -7,8 +7,6 @@ from skimage.transform import resize, rotate
 
 #from cellspots import Spots
 from cellspotsNewXML import Spots as SpotsV2
-#from cellspots import Spots
-from cellspotsNewXML import Spots as SpotsV2
 
 class CellModeler:
     """
