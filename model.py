@@ -17,16 +17,23 @@ from cellcycleclassifier_v2 import CellCycleClassifier
 
 import pandas as pd
 
+from cellcycleclassifier_v2 import CellCycleClassifier
+#from cellcycleclassifier import CellCycleClassifier
+
+import pandas as pd
+
 class Replicate:
     """
     This class controls and stores paths and the model for one replicate of an experimental condition
     """
 
     def __init__(self,fluor1path, basepath:str, base_type:str, fluor2path=None, membranepath=None, dnapath=None)->None:
+    def __init__(self,fluor1path, basepath:str, base_type:str, fluor2path=None, membranepath=None, dnapath=None)->None:
         
         self.fluor1path = fluor1path
         self.basepath = basepath
         self.base_type = base_type
+        
         
         if os.path.exists(fluor2path):
             self.fluor2path = fluor2path
@@ -37,6 +44,11 @@ class Replicate:
             self.membpath = membranepath
         else:
             self.membpath = None
+            
+        if os.path.exists(dnapath):
+            self.dnapath = dnapath
+        else:
+            self.dnapath = None
             
         if os.path.exists(dnapath):
             self.dnapath = dnapath
@@ -64,6 +76,7 @@ class Replicate:
         self.cellaligner = [None, None]
         self.cellmodeler = [None, None]
         
+        
         self.run_eHooke(channel=1)
         if fluor2path:
             self.run_eHooke(channel=2)
@@ -89,6 +102,10 @@ class Replicate:
             par.imageloaderparams.mask_algorithm = 'StarDist_BF'
         elif self.base_type == "Membrane":
             par.imageloaderparams.mask_algorithm = 'StarDist'
+            
+        par.imageloaderparams.auto_align = False
+        par.cellprocessingparams.cell_force_merge_below = 0
+        par.imageloaderparams.mask_dilation = 1
             
         par.imageloaderparams.auto_align = False
         par.cellprocessingparams.cell_force_merge_below = 0
@@ -121,7 +138,10 @@ class Replicate:
 
         # If there is membrane, also do cell cycle
         if self.dnapath:
+        if self.dnapath:
             # Classify cells
+            ccc = CellCycleClassifier(imm.fluor_image,self.dnapath,imm,cel)
+            ccc.classify_cells("Epifluorescence") #TODO Careful with epi! 
             ccc = CellCycleClassifier(imm.fluor_image,self.dnapath,imm,cel)
             ccc.classify_cells("Epifluorescence") #TODO Careful with epi! 
 
@@ -187,6 +207,7 @@ class ExperimentalCondition:
     """
 
     def __init__(self, root_path, fluor1, fluor2, memb_name, base_name, base_type, dna_name)->None:
+    def __init__(self, root_path, fluor1, fluor2, memb_name, base_name, base_type, dna_name)->None:
 
         self.root_path = root_path
 
@@ -194,6 +215,8 @@ class ExperimentalCondition:
         self.fluor2_name = fluor2
 
         self.memb_name = memb_name
+        
+        self.dna_name = dna_name
         
         self.dna_name = dna_name
 
@@ -224,9 +247,14 @@ class ExperimentalCondition:
 
         
             repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path, dna_path)
+            dna_path = os.path.join(replicate_fullname, self.dna_name + '.tif')
+
+        
+            repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path, dna_path)
             return repli
         else:
             return None
+        
         
 
     def askformodel(self, channel=1, modeltype='spot', minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
@@ -240,11 +268,13 @@ class ExperimentalCondition:
         if minspots>maxspots:
             minspots, maxspots = maxspots, minspots
             
+            
 
         totalN = 0
         totalCells = 0
         totalSpots = 0
         replicate_models = []
+        
         
         for repli in self.replicates:
             if repli:
@@ -277,6 +307,38 @@ class ExperimentalCondition:
                 y = np.concatenate([y,ycoords])
         return x,y
     
+    def askforscatterpercell(self,channel=1,cellcycle=(0,1,2,3)):
+        
+        coords_per_cell = {}
+        for idxrepli, repli in enumerate(self.replicates):
+            if repli:
+                for key,cell in repli.cellmanager[channel-1].cells.items():
+                    if cell.stats["Cell Cycle Phase"] in cellcycle:
+                        coords_per_cell[str(key)+f"_{idxrepli}"] = cell.spots_coords #TODO these are the coords in the local reference frame of the cell bounding box without the 4px border
+        
+        return coords_per_cell 
+    
+    def askfortable(self,channel=1):
+        
+        fov = []
+        cellid = []
+        nspots = []
+        ccp = []
+        spot_coords = []
+        
+        for idx,repli in enumerate(self.replicates):
+            if repli:
+                cm = repli.cellmanager[channel-1]
+                for cellkey in cm.cells:
+                    fov.append(os.path.basename(os.path.dirname(repli.fluor1path)))
+                    cellid.append(cellkey)
+                    nspots.append(cm.cells[cellkey].spots)
+                    ccp.append(cm.cells[cellkey].stats['Cell Cycle Phase'])
+                    spot_coords.append(cm.cells[cellkey].spots_coords)
+                    
+        
+        return pd.DataFrame(data={'FoV':fov,'CellID':cellid,f'Nspots_{channel}':nspots,'CCP':ccp, f'SpotCoords_{channel}':spot_coords})
+        
     def askforscatterpercell(self,channel=1,cellcycle=(0,1,2,3)):
         
         coords_per_cell = {}
