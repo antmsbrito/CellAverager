@@ -42,6 +42,7 @@ class CellAligner:
         outline = self.calculate_cell_outline(binary)
         major_axis, ratio = self.calculate_major_axis(outline)
 
+        
         return self.calculate_axis_angle(major_axis), ratio
 
     def align_cells(self)->None:
@@ -49,17 +50,19 @@ class CellAligner:
         Aligns all cells and builds new attr on cell manager objects
         """
         for key in self.cellmanager.cells:
+            try:
+                angle, axis_ratio = self.calculate_rotation_angle(key)
+                self.cellmanager.cells[key].axis_ratio = axis_ratio
+                self.cellmanager.cells[key].angle_of_rotation = angle
+                self.cellmanager.cells[key].aligned_cell_mask = rotate(self.cellmanager.cells[key].cell_mask, angle)
 
-            angle, axis_ratio = self.calculate_rotation_angle(key)
-            self.cellmanager.cells[key].axis_ratio = axis_ratio
-            self.cellmanager.cells[key].angle_of_rotation = angle
-            self.cellmanager.cells[key].aligned_cell_mask = rotate(self.cellmanager.cells[key].cell_mask, angle)
-
-            if self.fluor_channel == "Main":
-                self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].fluor * self.cellmanager.cells[key].cell_mask, angle) 
-            elif self.fluor_channel == "Optional":
-                self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].optional * self.cellmanager.cells[key].cell_mask, angle) 
-
+                if self.fluor_channel == "Main":
+                    self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].fluor * self.cellmanager.cells[key].cell_mask, angle) 
+                elif self.fluor_channel == "Optional":
+                    self.cellmanager.cells[key].aligned_fluor_mask = rotate(self.cellmanager.cells[key].optional * self.cellmanager.cells[key].cell_mask, angle) 
+            except:
+                self.cellmanager.cells[key].axis_ratio = None
+            
     def save_aligned_cells(self, path:str=None)->None:
         "For QC purposes"
         if path is None:
