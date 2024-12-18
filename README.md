@@ -54,14 +54,16 @@ ROOT FOLDER
 ...
 
 ```
-#### - Run `main.py` from eHooke's environment and follow the instructions in the GUI
+#### - Run the jupyter notebook 
 You have to provide the following information:
  1. The path to your local eHooke folder
  2. The path to the root folder where the images are (see above for example)
  3. The file name of the fluorescence images (without .tif)
  4. The file name of the base images (without .tif)
  5. The type of base image provided
- 6. Press ENTER!
+
+You have to edit the example jupyter notebook file according to your needs.
+
 
 ## Acknowledgements
 
