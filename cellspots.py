@@ -39,6 +39,12 @@ class Spots:
         # x is lines => Y axis
         # y is columns => X axis
         x0, y0, x1, y1 = box
+                
+        x0 = x0 + 4
+        y0 = y0 + 4
+        
+        x1 = x1 - 4
+        y1 = y1 - 4
 
         count = 0
         coords = []
@@ -56,3 +62,4 @@ class Spots:
                 count += 1
 
         return count, coords
+    
