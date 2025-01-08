@@ -15,7 +15,7 @@ class CellModeler:
     By default always tries to compute models with cells with more than 1 spot 
     By default always checks for cell cycle
     """
-    def __init__(self, cellmanager, imagemanager, xmlfile=None) -> None:
+    def __init__(self, cellmanager, imagemanager, xmlfile=None,pxsize=None) -> None:
         
         # Store ehooke classes 
         self.cellmanager = cellmanager
@@ -26,9 +26,9 @@ class CellModeler:
         # Check if xmlfile exists and if it does store the number of spots for each cell
         if xmlfile:
             try:
-                self.spots = self.read_xml_spots(xmlfile)
+                self.spots = self.read_xml_spots(xmlfile,pxsize)
             except:
-                self.spots = self.read_xml_spots_auto(xmlfile)
+                self.spots = self.read_xml_spots_auto(xmlfile,pxsize)
             for key in self.cellmanager.cells:
                 if self.cellmanager.cells[key].axis_ratio:
                     box = self.cellmanager.cells[key].box
@@ -149,21 +149,21 @@ class CellModeler:
 
 
     @staticmethod
-    def read_xml_spots_auto(xmlfile:str)->Spots:
+    def read_xml_spots_auto(xmlfile:str,pxsize:float)->Spots:
         # Read xml file into memory
         root = ET.parse(xmlfile).getroot()
         model_child = root[0]  # This is trackmate model object
         allspots = model_child[1]  # This is the spot xml node
         quality = float(root[1][4][0].attrib['value'])
 
-        return Spots(allspots, quality)
+        return Spots(allspots, quality, pxsize)
 
     @staticmethod
-    def read_xml_spots(xmlfile:str)->SpotsV2:
+    def read_xml_spots(xmlfile:str,pxsize:float)->SpotsV2:
         # Read xml file into memory
         root = ET.parse(xmlfile).getroot()
         model_child = root[1]  # This is trackmate model object
         allspots = model_child[1]  # This is the spot xml node
 
-        return SpotsV2(allspots)
+        return SpotsV2(allspots, pxsize)
     

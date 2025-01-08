@@ -9,11 +9,13 @@ import numpy as np
 
 class Spots:
 
-    def __init__(self, all_spots_node):
+    def __init__(self, all_spots_node, pxsize):
 
         self.n_spots = int(all_spots_node.attrib['nspots'])
 
         self.allspots = []
+
+        self.pxsize = pxsize
 
         for frame in all_spots_node:
             for spot in frame:
@@ -24,9 +26,9 @@ class Spots:
     def get_position(self, sp):
 
         # x axis is horizontal, right to left
-        x = float(sp.attrib['POSITION_X']) / 0.0645 # 0.08  # px size!? TODO currently this has to be manually changed case by case
+        x = float(sp.attrib['POSITION_X']) / self.pxsize #0.0645 # 0.08  # px size!? TODO currently this has to be manually changed case by case
         # y axis is vertical UP to DOWN
-        y = float(sp.attrib['POSITION_Y']) / 0.0645 # 0.08  # px size!? TODO currently this has to be manually changed case by case
+        y = float(sp.attrib['POSITION_Y']) / self.pxsize #0.0645 # 0.08  # px size!? TODO currently this has to be manually changed case by case
 
         return x, y
 
