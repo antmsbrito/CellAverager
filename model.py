@@ -22,11 +22,13 @@ class Replicate:
     This class controls and stores paths and the model for one replicate of an experimental condition
     """
 
-    def __init__(self,fluor1path, basepath:str, base_type:str, fluor2path=None, membranepath=None, dnapath=None)->None:
+    def __init__(self,fluor1path, basepath:str, base_type:str, fluor2path=None, membranepath=None, dnapath=None, pxsize=None)->None:
         
         self.fluor1path = fluor1path
         self.basepath = basepath
         self.base_type = base_type
+
+        self.pxsize = pxsize
         
         if os.path.exists(fluor2path):
             self.fluor2path = fluor2path
@@ -137,16 +139,16 @@ class Replicate:
 
         if self.membpath:
             self.cellaligner[0] = CellAligner(self.cellmanager[0], "Optional")
-            self.cellmodeler[0] = CellModeler(self.cellmanager[0], self.imagemanager[0], self.xml1path)
+            self.cellmodeler[0] = CellModeler(self.cellmanager[0], self.imagemanager[0], self.xml1path,self.pxsize)
             if self.fluor2path:
                 self.cellaligner[1] = CellAligner(self.cellmanager[1], "Optional")
-                self.cellmodeler[1] = CellModeler(self.cellmanager[1], self.imagemanager[1], self.xml2path)
+                self.cellmodeler[1] = CellModeler(self.cellmanager[1], self.imagemanager[1], self.xml2path,self.pxsize)
         else:
             self.cellaligner[0] = CellAligner(self.cellmanager[0], "Main")
-            self.cellmodeler[0] = CellModeler(self.cellmanager[0], self.imagemanager[0], self.xml1path)
+            self.cellmodeler[0] = CellModeler(self.cellmanager[0], self.imagemanager[0], self.xml1path,self.pxsize)
             if self.fluor2path:
                 self.cellaligner[1] = CellAligner(self.cellmanager[1], "Main")
-                self.cellmodeler[1] = CellModeler(self.cellmanager[1], self.imagemanager[1], self.xml2path)    
+                self.cellmodeler[1] = CellModeler(self.cellmanager[1], self.imagemanager[1], self.xml2path,self.pxsize)    
         
     def buildmodel(self, channel=1, modeltype='spot', minspots=1, maxspots=np.inf, cellcycle=(0,1,2,3)):
         """
@@ -186,7 +188,7 @@ class ExperimentalCondition:
     This class controls and stores paths and models for all the replicates in an experimental condition
     """
 
-    def __init__(self, root_path, fluor1, fluor2, memb_name, base_name, base_type, dna_name)->None:
+    def __init__(self, root_path, fluor1, fluor2, memb_name, base_name, base_type, dna_name, pxsize)->None:
 
         self.root_path = root_path
 
@@ -201,6 +203,7 @@ class ExperimentalCondition:
         self.base_type = base_type
         
         self.replicates = None
+        self.pxsize = pxsize
 
         self.search_root()
 
@@ -223,7 +226,7 @@ class ExperimentalCondition:
             dna_path = os.path.join(replicate_fullname, self.dna_name + '.tif')
 
         
-            repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path, dna_path)
+            repli = Replicate(fluor1_path, base_path, self.base_type, fluor2_path, membrane_path, dna_path,pxsize=self.pxsize)
             return repli
         else:
             return None
