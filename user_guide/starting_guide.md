@@ -9,175 +9,169 @@ Workflow:
  - Alignement of individual cells by their major axis
  - Averaging fluorescence or spot localizations into a representative cell model. If spot models are needed **TrackMate XML files NEED to be available**. More info below
 
-## Requirements
-
-- eHooke 1.1 and its dependencies (Python 3.6)
-- JupyterLab.
-- FIJI Installation compatible with TrackMate script - [HERE](https://gist.github.com/antmsbrito/f2250a1a905457436532ee761fa6eab7)
-
-
-## Quick Start
-
-1. Prepare root folder containing your rawdata, including channel splitting.
-2. Generate TrackMate XML files if spot localization will be included.
-3. Create a folder to save your results. 
-3. Clone or download the repo, copy the batch notebook and edit the paths and image names.
-4. Run the notebook cells in order.
-
 ## Inputs
 
 ### Required
 
 - Root folder containing one folder per experiment
+- Folder to save results to. 
+- Download eHooke 1.1, AverageCellLoc and create a suitable python 3.6 environment
+- FIJI and Trackmate (optional)
+- The following scripts for preprocessing
+    - Splitting and reorganizing raw data into the expected format - [HERE](https://gist.github.com/antmsbrito/7d9602ad6da8c84a1a37b9765bce5f58)
+    - Exporting TrackMate XML files - [HERE](https://gist.github.com/antmsbrito/f2250a1a905457436532ee761fa6eab7)
 
-```text
-ROOT FOLDER
-├── Experiment_1
-│   ├── FoV_1
-│   │   ├── Fluor_1.tif
-│   │   ├── Fluor_1.xml   # optional
-│   │   ├── Fluor_2.tif   # optional
-│   │   ├── Fluor_2.xml   # optional
-│   │   ├── Originalfile.czi  # The original image in the original file format can stay in the folder
-│   │   └── Base.tif
-│   ├── FoV_2
-│   │   ├── Fluor_1.tif
-│   │   └── Base.tif
+## STEP #1 Set up your root folder
+
+Root folder should contain one folder per experiment. Each experiment folder should contain the raw data for all FoVs of that experiment. The expected folder structure is as follows:
+
+```root_folder/
+├── experiment_1/
+│   ├── FoV1.czi
+│   ├── FoV2.czi
 │   └── ...
-├── Experiment_2
+├── experiment_2/
+│   ├── FoV1.czi
+│   ├── FoV2.czi
+│   └── ...
+└── ...
+``` 
+
+Open FIJI and use the following [script](https://gist.github.com/antmsbrito/7d9602ad6da8c84a1a37b9765bce5f58) to split and reorganize the raw data into the expected format. This script assumes that your raw data is in CZI format. The script will create separate folders for each experiment and save the split images in the appropriate format. 
+
+IMPORTANT: CHANGE LINE 45 AND 49 OF THE SCRIPT TO MATCH YOUR IMAGE AND FOLDER STRUCTURE. 
+
+For example if your raw data is in a folder called `rawdata` and your images have 2 channels named `channel1` and `channel2`, you would change line 45 to:
+
+```python
+rootpath = r"rawdata" 
+```
+And line 49 to:
+
+```python
+		name = ['channel1','channel2']
+``` 
+
+To use it, just drag and drop it into FIJI and click run. The folder structure now should look like this:
+
+```root_folder/
+├── experiment_1/
+│   ├── 1
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   └── FoV1.czi
+│   ├── 2
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   └── FoV2.czi
+│   └── ...
+├── experiment_2/
+│   ├── 1
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   └── FoV1.czi
+│   ├── 2
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   └── FoV2.czi
+│   └── ...
+└── ...
+``` 
+
+
+## STEP #2 Export TrackMate XML files (optional)
+
+This step is optional but required if you want to build spot-based models. If you only want to build fluorescence-based models, you can skip it.
+
+Open FIJI and use the following [script](https://gist.github.com/antmsbrito/bc824dc9456223e27ffb13e7a1bc0bd2) to export TrackMate XML files. This script assumes that your images are in the format described in STEP #1. The script will create a TrackMate XML file for each FoV **NOT NAMED PHASE OR LABELS** and save it in the appropriate folder.
+
+IMPORTANT: CHANGE LINE 35, 48-53 AND 93 TO MATCH THE DESIRED SETTINGS. 
+
+Line 35 should be changed to match the pixel size in microns of your images: 
+
+```python
+    IJ.run(imp, "Properties...", "channels=1 slices=1 frames=1 pixel_width=0.0645 pixel_height=0.0645 voxel_depth=1.0000");
+```
+
+Line 47-53 should be changed to match the settings you want to use for spot detection. For example, if you want to use a LoG detector with a **radius** of 0.2 microns you would change it to:
+
+```python
+settings.detectorSettings = {
+        'DO_SUBPIXEL_LOCALIZATION': True,
+        'RADIUS': 0.2,  # CHANGE IF NEEDED
+        'TARGET_CHANNEL': 1,
+        'THRESHOLD': 1.,  
+        'DO_MEDIAN_FILTERING': False,
+    }
+``` 
+
+Line 93 should be changed to your rootfolder path. 
+
+
+To use it, just drag and drop it into FIJI and click run. The folder structure now should look like this:
+
+```root_folder/
+├── experiment_1/
+│   ├── 1
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   ├── FoV1.czi
+│   │   ├── channel1.xml
+│   │   └── channel2.xml
+│   ├── 2
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   ├── FoV2.czi
+│   │   ├── channel1.xml
+│   │   └── channel2.xml
+│   └── ...
+├── experiment_2/
+│   ├── 1
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   ├── FoV1.czi
+│   │   ├── channel1.xml
+│   │   └── channel2.xml
+│   ├── 2
+│   │   ├── channel1.tif
+│   │   ├── channel2.tif
+│   │   ├── FoV2.czi
+│   │   ├── channel1.xml
+│   │   └── channel2.xml
 │   └── ...
 └── ...
 ```
 
 
-### Optional
 
-- Second fluorescence channel.
-- Membrane channel.
-- DNA channel for cell-cycle classification.
-- TrackMate `.xml` file for spot localization.
-- Pixel size value used when converting spot coordinates.
+## STEP 3 - Run the notebook
 
+Make sure you have the required dependencies installed. 
 
+Download AverageCellLoc and make a copy of the `RunCA_Batch_example.ipynb` notebook and rename it to something you prefer. 
 
-### Notes on Naming
+Open the notebook 
 
-- Keep image names consistent across all fields of view.
-- Use the same base image name in every replicate folder.
-- If you use a second fluorescence channel, keep its file name consistent too.
-- If XML files are present, they should match the corresponding fluorescence image name.
+````bash
+jupyter lab RunCA_Batch_example.ipynb
+````
 
-## Notebook Setup
+Before running the notebook, read the instructions and fill in the following variables or cells:
 
-Before running the example notebook, fill in the following variables or cells:
+- `ehooke_path`: [add the path to eHooke 1.1 here]
+- `root_folder`: [add the path to the root folder here]
+- `result_folder`: [add the path to results folder here]
 
-- `eHooke_path`: [add the local path here]
-- `root_path`: [add the root experiment folder here]
-- `fluor1_name`: [add the main fluorescence file name here]
-- `fluor2_name`: [add the second fluorescence file name here, if used]
-- `base_name`: [add the base image file name here]
-- `base_type`: [choose Phase, BF, or Membrane]
-- `pxsize`: [add the pixel size here, if spot coordinates are used]
-- `memb_name`: [add membrane image name here, if used]
-- `dna_name`: [add DNA image name here, if used]
+- `base`: [name of the filename to be used as the base image (img to be segmented)]
+- `membrane`: [name of the filename containing membrane signal, if available - ONLY USED FOR CELL-CYCLE CLASSIFICATION]
+- `basetype`: [type of the base image, either 'Phase', 'BF' or 'Membrane' - important for segmentation]
+- `dnaname`: [name of the filename containing DNA signal, if available - ONLY USED FOR CELL-CYCLE CLASSIFICATION]
+- `pxsize`: [pixel size in microns of the images] 
 
-### Base Image Type
-
-- `Phase`: [describe when to use this]
-- `BF`: [describe when to use this]
-- `Membrane`: [describe when to use this]
-
-## Processing Pipeline
-
-### 1. Image discovery
-
-- The code scans the root folder for replicate subfolders.
-- Each replicate folder is expected to contain the images for one field of view.
-- Placeholder: describe any lab-specific folder naming rules.
-
-### 2. Segmentation with eHooke
-
-- The base image is loaded and masked.
-- eHooke computes cell segments from the base image.
-- The mask settings vary depending on the selected base image type.
-- Placeholder: mention any parameter values your lab usually changes.
-
-### 3. Cell alignment
-
-- Each cell is aligned to its major axis.
-- Fluorescence masks are rotated to match the aligned cell geometry.
-- Placeholder: explain why alignment is important for averaging.
-
-### 4. Model building
-
-- Average-cell fluorescence models can be built for one or two channels.
-- Spot-based models can be built if TrackMate XML is available.
-- Cells can be filtered by spot count and by cell-cycle phase.
-
-### 5. Optional spot localization
-
-- TrackMate XML files are parsed to recover spot coordinates.
-- Spot coordinates are converted into cell-local coordinate frames.
-- Placeholder: document the exact XML export workflow your lab should use.
-
-### 6. Optional cell-cycle classification
-
-- If membrane and DNA images are available, cells can be classified by phase.
-- The bundled model expects the classifier inputs used by the current code.
-- Placeholder: add notes about microscope settings or data types that work best.
-
-## Main Outputs
-
-### Per-replicate outputs
-
-- Segmentation label images.
-- Aligned cell masks.
-- Aligned fluorescence masks.
-- Placeholder: list any files written by your notebook or downstream scripts.
-
-### Aggregate outputs
-
-- Average fluorescence model.
-- Average spot-localization model, if XML files are provided.
-- Counts of selected cells, total cells, and total spots.
-- Placeholder: describe file names, plots, or saved arrays here.
-
-## Suggested Notebook Workflow
-
-1. Confirm the folder structure matches the expected layout.
-2. Edit the notebook variables.
-3. Run the import and setup cells.
-4. Run the replicate loading and segmentation cells.
-5. Inspect the segmentation and alignment QC outputs.
-6. Build the requested model type.
-7. Save or export the final result.
-
-## Quality Control Checklist
-
-- [ ] Are the base images being segmented correctly?
-- [ ] Are the cell masks aligned in the expected orientation?
-- [ ] Are fluorescence channels being loaded from the correct files?
-- [ ] Do the TrackMate XML files match the image ordering?
-- [ ] Are spot counts plausible for the selected population?
-- [ ] Does the final average model look biologically sensible?
-
-## Troubleshooting
+- `fluor1`: [name of the filename containing the first fluorescence signal]
+- `fluor2`: [name of the filename containing the second fluorescence signal, if available, otherwise set to 'none']
 
 
-## Parameter Reference
+### The following is also VERY IMPORTANT to check: 
 
-### Model selection
-
-- `modeltype = spot`: [describe the output]
-- `modeltype = average`: [describe the output]
-
-### Cell filters
-
-- `minspots`: [describe default and meaning]
-- `maxspots`: [describe default and meaning]
-- `cellcycle`: [describe valid values and meaning]
-
-### Channel selection
-
-- `channel = 1`: [describe channel 1]
-- `channel = 2`: [describe channel 2]
+- `model.py` : Check eHooke settings and make sure they are suitable for your data. Although most are default some are important to check such as channel alignment and mask dilation. 
