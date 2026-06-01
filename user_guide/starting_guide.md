@@ -148,9 +148,15 @@ To use it, just drag and drop it into FIJI and click run. The folder structure n
 
 Make sure you have the required dependencies installed. 
 
+eHooke 1.1 is required and should be working. Confirm that you also have Jupyter Lab installed and working. In the terminal, you can check if Jupyter Lab is installed by running:
+
+````
+pip install jupyterlab
+````
+
 Download AverageCellLoc and make a copy of the `RunCA_Batch_example.ipynb` notebook and rename it to something you prefer. 
 
-Open the notebook 
+Open the notebook and run it. You can run the notebook in Jupyter Lab by navigating to the folder where the notebook is located and running:
 
 ````bash
 jupyter lab RunCA_Batch_example.ipynb
